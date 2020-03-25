@@ -689,7 +689,19 @@ def test_piecewise_solveset():
 
     assert solveset(Piecewise((x - 1, Ne(x, I)), (x, True)), x) == FiniteSet(1)
 
+    # Issue 18939: Piecewise constant functions with two variables
+    assert solveset(y - Heaviside(x), x, Reals) == Union(
+        ConditionSet(x, Eq(y, 0), Interval.open(-oo, 0)),
+        ConditionSet(x, Eq(y - 1, 0), Interval.open(0, oo)),
+        ConditionSet(x, Eq(y - Heaviside(0), 0), FiniteSet(0)),
+    )
 
+    assert solveset(y - DiracDelta(x), x, Reals) == Union(
+        ConditionSet(x, Eq(y, 0), Union(Interval.open(-oo, 0), Interval.open(0, oo))),
+        ConditionSet(x, Eq(y - DiracDelta(0), 0), FiniteSet(0)),
+    )
+
+    
 def test_solveset_complex_polynomial():
     assert solveset_complex(a*x**2 + b*x + c, x) == \
         FiniteSet(-b/(2*a) - sqrt(-4*a*c + b**2)/(2*a),
