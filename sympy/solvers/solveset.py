@@ -915,7 +915,7 @@ def _solveset(f, symbol, domain, _check=False):
     if f.expand().is_zero:
         return domain
     elif not f.has(symbol):
-        return EmptySet
+        return ConditionSet(symbol, Eq(f, 0), domain)
     elif f.is_Mul and all(_is_finite_with_finite_vars(m, domain)
             for m in f.args):
         # if f(x) and g(x) are both finite we can say that the solution of
