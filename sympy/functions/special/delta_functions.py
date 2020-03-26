@@ -8,8 +8,8 @@ from sympy.core.relational import Eq, Ne
 from sympy.functions.elementary.complexes import im, sign
 from sympy.functions.elementary.piecewise import Piecewise
 from sympy.polys.polyerrors import PolynomialError
+from sympy.sets import Intersection, FiniteSet
 from sympy.utilities import filldedent
-
 
 ###############################################################################
 ################################ DELTA FUNCTION ###############################
@@ -258,6 +258,7 @@ class DiracDelta(Function):
 
         """
         from sympy.polys.polyroots import roots
+        from sympy.solvers.solveset import solveset
 
         wrt = hints.get('wrt', None)
         if wrt is None:
@@ -290,6 +291,27 @@ class DiracDelta(Function):
                 return result
         except PolynomialError:
             pass
+
+        # If the argument of the delta has two variables, one which is the integrand
+        # to which the delta is non-linear, and the other is not the integrand and the
+        # delta is linear wrt it, then use inversion to simplify the delta
+        # i.e. delta(y - g(x)) dx = \sum_i delta(x - h_i(y)) h_i'(y) dx
+        #      for h_i right inverses of g.
+        free = self.args[0].free_symbols
+        if len(free) >= 2:
+            arginvs = solveset(self.args[0], wrt, S.Reals)
+            # TODO: Also treat the case when we have an interval of solutions
+            if isinstance(arginvs, Intersection) and len(arginvs.args) == 2 and S.Reals in arginvs.args:
+                set1, set2 = arginvs.args
+                arginvs = set2 if set1 == S.Reals else set1
+            if isinstance(arginvs, FiniteSet):
+                result = 0
+                darg = abs(diff(self.args[0], wrt))
+                for hi in arginvs.args:
+                    if diff(self.args[0], wrt).subs(wrt, hi) != 0:
+                        result += self.func(wrt - hi) / darg.subs(wrt, hi)
+                return result
+            
         return self
 
     def is_simple(self, x):
